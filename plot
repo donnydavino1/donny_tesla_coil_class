@@ -5,13 +5,13 @@ import time
 import pandas as pd
 
 # Parameters
-x_len = 3000         # Number of points to display
-y_range = [0, 150]  # Range of possible Y values to display
+x_len = 20         # Number of points to display
+y_range = [18, 80]  # Range of possible Y values to display
 
 # Create figure for plotting
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
-x_value = list(range(0, 3000))
+x_value = list(range(0, 20))
 y_value = [0] * x_len
 ax.set_ylim(y_range)
 
@@ -44,6 +44,6 @@ def animate(i, y_value):
 ani = animation.FuncAnimation(fig,
     animate,
     fargs=(y_value,),
-    interval=500,
+    interval=100,
     blit=True)
 plt.show()
