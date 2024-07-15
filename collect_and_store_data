@@ -1,9 +1,8 @@
-
-import PCF8591 as ADC  # Import PCF8591 module
 import time  # Import time for delay
 import csv
+import board
+import adafruit_dht
 
-ADC.setup(0x48)  # Initialize PCF8591 at address 0x48
 #### Write CSV
 
 x_value = 0
@@ -11,24 +10,42 @@ y_value = 0
 
 fieldnames = ['x_value','y_value']
 
+
+dhtDevice = adafruit_dht.DHT11(board.D17,use_pulseio=False)
+
+
 with open('data_1s.csv','w') as csv_file:
     csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     csv_writer.writeheader()
 
 while True:
-    with open('data_1s.csv', 'a') as csv_file:
-        csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames )
-        
-        info = {
-            "x_value": x_value,
-            "y_value": y_value
-        }
-        
-        csv_writer.writerow(info)
-        print(x_value, y_value)
-        
-        x_value += 1
-        y_value = round(ADC.read(1), 2)
-        
-    time.sleep(.5)   
+    try:
+        with open('data_1s.csv', 'a') as csv_file:
+            csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames )
+            
+            info = {
+                "x_value": x_value,
+                "y_value": y_value
+            }
+            
+            csv_writer.writerow(info)
+            print(x_value, y_value)
+            
+            x_value += 1
+            y_value = dhtDevice.temperature
+            
+        time.sleep(.1)   
+    
+    
+    except RuntimeError as error:
+        # Errors happen fairly often, DHT's are hard to read, just keep going
+        print(error.args[0])
+        time.sleep(.1)
+        continue
+    except Exception as error:
+        dhtDevice.exit()
+        raise error
+
+    time.sleep(.1)
+
     
