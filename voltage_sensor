@@ -1,27 +1,29 @@
 import time
-import spidev
-import Adafruit_GPIO.SPI as SPI
-import Adafruit_MCP3008
-
-# Software SPI configuration
-SPI_PORT   = 0
-SPI_DEVICE = 0
-mcp = Adafruit_MCP3008.MCP3008(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
 
 # Constants for the voltage divider
-R1 = 30000.0
-R2 = 7500.0
-ref_voltage = 5.0
+R1 = 30000.0  # Resistance of the first resistor in ohms
+R2 = 7500.0   # Resistance of the second resistor in ohms
+ref_voltage = 5.0  # Reference voltage of the ADC in volts
 
-# Function to read the ADC value and convert to voltage
-def read_voltage(channel):
-    # Read the analog pin
-    adc_value = mcp.read_adc(channel)
+# Create the I2C bus
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Create the ADS object
+ads = ADS.ADS1115(i2c)
+
+# Create a single-ended ADC channel on pin 0
+chan = AnalogIn(ads, ADS.P0)
+
+# Function to read the voltage from the ADS1115 and convert to input voltage
+def read_voltage():
+    # Read the voltage at the ADC input
+    adc_voltage = chan.voltage
     
-    # Determine voltage at ADC input
-    adc_voltage = (adc_value * ref_voltage) / 1024.0
-    
-    # Calculate voltage at divider input
+    # Calculate voltage at the divider input
     in_voltage = adc_voltage / (R2 / (R1 + R2))
     
     return in_voltage
@@ -30,8 +32,8 @@ def read_voltage(channel):
 if __name__ == "__main__":
     print("DC Voltage Test")
     while True:
-        # Read the voltage from the specified channel (e.g., channel 0)
-        voltage = read_voltage(0)
+        # Read the voltage from the ADS1115
+        voltage = read_voltage()
         
         # Print the results to 2 decimal places
         print(f"Input Voltage = {voltage:.2f} V")
