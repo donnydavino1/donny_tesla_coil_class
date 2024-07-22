@@ -1,31 +1,54 @@
 import time
-import board
-import busio
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
+import smbus
+
+# Constants for the ADS1115
+ADS1115_ADDRESS = 0x48  # Default I2C address
+ADS1115_CONFIG_REG = 0x01
+ADS1115_CONVERSION_REG = 0x00
+ADS1115_POINTER_CONFIG = 0x01
+ADS1115_POINTER_CONVERSION = 0x00
 
 # Constants for the voltage divider
 R1 = 30000.0  # Resistance of the first resistor in ohms
 R2 = 7500.0   # Resistance of the second resistor in ohms
 ref_voltage = 5.0  # Reference voltage of the ADC in volts
 
-# Create the I2C bus
-i2c = busio.I2C(board.SCL, board.SDA)
+# I2C setup
+bus = smbus.SMBus(1)  # For Raspberry Pi, bus 1 is usually used
 
-# Create the ADS object
-ads = ADS.ADS1115(i2c)
+# Function to read 16-bit signed integer from ADS1115
+def read_adc():
+    # Configure the ADS1115
+    config = [
+        0xC3,  # Configuration register
+        0x83   # Single-ended mode, 4.096V range, 128 SPS
+    ]
+    bus.write_i2c_block_data(ADS1115_ADDRESS, ADS1115_POINTER_CONFIG, config)
 
-# Create a single-ended ADC channel on pin 0
-chan = AnalogIn(ads, ADS.P0)
+    # Wait for conversion to complete
+    time.sleep(0.1)
+
+    # Read the conversion result
+    data = bus.read_i2c_block_data(ADS1115_ADDRESS, ADS1115_POINTER_CONVERSION, 2)
+    raw_adc = (data[0] << 8) | data[1]
+
+    # Convert to signed value
+    if raw_adc > 0x7FFF:
+        raw_adc -= 0x10000
+    
+    return raw_adc
 
 # Function to read the voltage from the ADS1115 and convert to input voltage
 def read_voltage():
-    # Read the voltage at the ADC input
-    adc_voltage = chan.voltage
-    
+    # Read the ADC value
+    raw_adc = read_adc()
+
+    # Convert ADC value to voltage
+    adc_voltage = (raw_adc * ref_voltage) / 32768.0
+
     # Calculate voltage at the divider input
     in_voltage = adc_voltage / (R2 / (R1 + R2))
-    
+
     return in_voltage
 
 # Main loop
