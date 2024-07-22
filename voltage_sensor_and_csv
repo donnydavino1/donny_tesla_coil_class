@@ -2,6 +2,7 @@ import time
 import smbus
 import csv
 from datetime import datetime
+import pytz
 
 # Constants for the ADS1115
 ADS1115_ADDRESS = 0x48  # Default I2C address
@@ -21,7 +22,10 @@ csv_file = open('/home/donny1/Desktop/voltage_readings.csv', 'w', newline='')
 csv_writer = csv.writer(csv_file)
 
 # Write the header row to the CSV file
-csv_writer.writerow(['Time', 'Voltage'])
+csv_writer.writerow(['Time (EST)', 'Voltage'])
+
+# Set up timezone for EST
+est = pytz.timezone('America/New_York')
 
 def configure_ads1115():
     # Set up configuration register for single-ended input on A0
@@ -59,12 +63,13 @@ if __name__ == "__main__":
         while True:
             # Read the voltage from the ADS1115
             voltage = read_voltage()
-            # Get the current time
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # Get the current time in UTC and convert to EST
+            utc_time = datetime.now(pytz.utc)
+            est_time = utc_time.astimezone(est).strftime('%Y-%m-%d %H:%M:%S')
             # Print the results to 2 decimal places
-            print(f"Time: {current_time}, Input Voltage = {voltage:.2f} V")
+            print(f"Time (EST): {est_time}, Input Voltage = {voltage:.2f} V")
             # Write the current time and voltage to the CSV file
-            csv_writer.writerow([current_time, voltage])
+            csv_writer.writerow([est_time, voltage])
             # Flush the buffer to ensure data is written to the file
             csv_file.flush()
             # Short delay
