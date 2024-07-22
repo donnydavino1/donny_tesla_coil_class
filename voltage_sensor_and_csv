@@ -1,0 +1,76 @@
+import time
+import smbus
+import csv
+from datetime import datetime
+
+# Constants for the ADS1115
+ADS1115_ADDRESS = 0x48  # Default I2C address
+ADS1115_POINTER_CONFIG = 0x01
+ADS1115_POINTER_CONVERSION = 0x00
+
+# Constants for the voltage divider
+R1 = 30000.0  # Resistance of the first resistor in ohms
+R2 = 7500.0   # Resistance of the second resistor in ohms
+ref_voltage = 4.096  # Reference voltage of the ADC in volts (±4.096V range)
+
+# I2C setup
+bus = smbus.SMBus(1)  # For Raspberry Pi, bus 1 is usually used
+
+# Open a CSV file for writing
+csv_file = open('/home/donny1/Desktop/voltage_readings.csv', 'w', newline='')
+csv_writer = csv.writer(csv_file)
+
+# Write the header row to the CSV file
+csv_writer.writerow(['Time', 'Voltage'])
+
+def configure_ads1115():
+    # Set up configuration register for single-ended input on A0
+    # Single-ended input on A0, FSR = ±4.096V, Data rate = 128 SPS
+    config = [
+        0xC3,  # MSB: Single-ended, FSR = ±4.096V, Data rate = 128 SPS
+        0x83   # LSB
+    ]
+    bus.write_i2c_block_data(ADS1115_ADDRESS, ADS1115_POINTER_CONFIG, config)
+
+def read_adc():
+    configure_ads1115()
+    # Wait for conversion to complete
+    time.sleep(0.1)
+    # Read the conversion result
+    data = bus.read_i2c_block_data(ADS1115_ADDRESS, ADS1115_POINTER_CONVERSION, 2)
+    raw_adc = (data[0] << 8) | data[1]
+    # Convert to signed value
+    if raw_adc > 0x7FFF:
+        raw_adc -= 0x10000
+    return raw_adc
+
+def read_voltage():
+    # Read the ADC value
+    raw_adc = read_adc()
+    # Convert ADC value to voltage
+    adc_voltage = (raw_adc * ref_voltage) / 32768.0
+    # Calculate voltage at the divider input
+    in_voltage = adc_voltage / (R2 / (R1 + R2))
+    return in_voltage
+
+if __name__ == "__main__":
+    print("DC Voltage Test")
+    try:
+        while True:
+            # Read the voltage from the ADS1115
+            voltage = read_voltage()
+            # Get the current time
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # Print the results to 2 decimal places
+            print(f"Time: {current_time}, Input Voltage = {voltage:.2f} V")
+            # Write the current time and voltage to the CSV file
+            csv_writer.writerow([current_time, voltage])
+            # Flush the buffer to ensure data is written to the file
+            csv_file.flush()
+            # Short delay
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("Stopping...")
+    finally:
+        # Close the CSV file when done
+        csv_file.close()
