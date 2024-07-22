@@ -1,0 +1,40 @@
+import time
+import spidev
+import Adafruit_GPIO.SPI as SPI
+import Adafruit_MCP3008
+
+# Software SPI configuration
+SPI_PORT   = 0
+SPI_DEVICE = 0
+mcp = Adafruit_MCP3008.MCP3008(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+
+# Constants for the voltage divider
+R1 = 30000.0
+R2 = 7500.0
+ref_voltage = 5.0
+
+# Function to read the ADC value and convert to voltage
+def read_voltage(channel):
+    # Read the analog pin
+    adc_value = mcp.read_adc(channel)
+    
+    # Determine voltage at ADC input
+    adc_voltage = (adc_value * ref_voltage) / 1024.0
+    
+    # Calculate voltage at divider input
+    in_voltage = adc_voltage / (R2 / (R1 + R2))
+    
+    return in_voltage
+
+# Main loop
+if __name__ == "__main__":
+    print("DC Voltage Test")
+    while True:
+        # Read the voltage from the specified channel (e.g., channel 0)
+        voltage = read_voltage(0)
+        
+        # Print the results to 2 decimal places
+        print(f"Input Voltage = {voltage:.2f} V")
+        
+        # Short delay
+        time.sleep(0.5)
