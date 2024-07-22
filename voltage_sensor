@@ -9,7 +9,7 @@ ADS1115_POINTER_CONVERSION = 0x00
 # Constants for the voltage divider
 R1 = 30000.0  # Resistance of the first resistor in ohms
 R2 = 7500.0   # Resistance of the second resistor in ohms
-ref_voltage = 4.096  # Reference voltage of the ADC in volts (±4.096V range)
+ref_voltage = 4.096 # Reference voltage of the ADC in volts (±4.096V range)
 
 # I2C setup
 bus = smbus.SMBus(1)  # For Raspberry Pi, bus 1 is usually used
